@@ -1,6 +1,13 @@
-class ChebyshevKAN(nn.Module):
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
+
+class ChebyshevKANLayer(nn.Module):
     def __init__(self, input_dim, output_dim, degree):
-        super(ChebyshevKAN, self).__init__()
+        super(ChebyshevKANLayer, self).__init__()
         self.inputdim = input_dim
         self.outdim = output_dim
         self.degree = degree
