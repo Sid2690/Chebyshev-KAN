@@ -1,2 +1,2 @@
 # Chebyshev-KAN
-Implementation of Kolmogorov-Arnold Network using Chebyshev Polynomials
+This is a more refined implementation of the Chebyshev polynomial-based Kolmogorov-Arnold network, drawing inspiration from the KAN paper and the ChebyKAN repository
