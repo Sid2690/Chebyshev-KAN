@@ -1,6 +1,6 @@
-class ChebyKANLayer(nn.Module):
+class ChebyshevKAN(nn.Module):
     def __init__(self, input_dim, output_dim, degree):
-        super(ChebyKANLayer, self).__init__()
+        super(ChebyshevKAN, self).__init__()
         self.inputdim = input_dim
         self.outdim = output_dim
         self.degree = degree
