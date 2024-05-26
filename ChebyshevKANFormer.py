@@ -3,7 +3,6 @@ import torch.nn.functional as F
 import math
 import numpy as np
 
-
 class ChebyshevKANLayer(nn.Module):
     def __init__(self, input_dim, output_dim, degree):
         super(ChebyshevKANLayer, self).__init__()
