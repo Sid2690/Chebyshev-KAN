@@ -2,3 +2,10 @@
 This is a more refined implementation of the Chebyshev polynomial-based Kolmogorov-Arnold network, drawing inspiration from the KAN paper 
 
 ![image](https://github.com/Sid2690/Chebyshev-KAN/assets/169923343/f7377cb0-71a3-484d-9a18-fca2f3a263a6)
+
+# Experiments
+
+### Simple AutoEncoder-MNIST
+
+![image](https://github.com/Sid2690/Chebyshev-KAN/assets/169923343/ddd24121-e278-49ff-bc31-59b5bd36d476)
+
