@@ -10,6 +10,7 @@ This is the result of a test done on a toy dataset using grid-based and non-grid
 # Experiments
 
 ### Simple AutoEncoder-MNIST
+Using chebyshevKAN(wihtout grid)
 
 ![image](https://github.com/Sid2690/Chebyshev-KAN/assets/169923343/ddd24121-e278-49ff-bc31-59b5bd36d476)
 
