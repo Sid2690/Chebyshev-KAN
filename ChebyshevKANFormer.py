@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+import torch.nn as nn
 import math
 import numpy as np
 
@@ -28,30 +29,19 @@ class ChebyshevKANLayer(nn.Module):
         y = y.view(-1, self.outdim)
         return y
 
-class KAN(torch.nn.Module):
-    def __init__(
-        self,
-        layers_hidden,
-        degree=3,
-    ):
+class KAN(nn.Module):
+    def __init__(self, layers_hidden, degree=3):
         super(KAN, self).__init__()
-
-        self.layers = torch.nn.ModuleList()
+        self.layers = nn.ModuleList()
         for in_features, out_features in zip(layers_hidden, layers_hidden[1:]):
-            self.layers.append(
-                ChebyshevKANLayer(
-                    in_features,
-                    out_features,
-                    degree,
-                )
-            )
+            self.layers.append(ChebyshevKANLayer(in_features, out_features, degree))
 
     def forward(self, x: torch.Tensor):
         for layer in self.layers:
             x = layer(x)
         return x
 
-class MultiheadKANAttention(torch.nn.Module):
+class MultiheadKANAttention(nn.Module):
     def __init__(self, hidden_size, num_heads, rotation_matrix, degree=3):
         super().__init__()
         self.hidden_size = hidden_size
@@ -60,51 +50,34 @@ class MultiheadKANAttention(torch.nn.Module):
         self.position_emb = rotation_matrix
 
         self.qkv_linear = ChebyshevKANLayer(hidden_size, hidden_size * 3, degree)
-        self.out = torch.nn.Linear(hidden_size, hidden_size)
+        self.out = nn.Linear(hidden_size, hidden_size)
 
     def forward(self, x):
         batch_size, seq_length, hidden_size = x.size()
-
         qkv = self.qkv_linear(x)
-
         qkv = qkv.reshape(batch_size, seq_length, self.num_heads, 3 * self.head_dim)
         qkv = qkv.transpose(1, 2)
-
         queries, keys, values = qkv.chunk(3, dim=-1)
         queries = apply_rotary_pos_emb(queries, self.position_emb)
         keys = apply_rotary_pos_emb(keys, self.position_emb)
-
         scores = torch.matmul(queries, keys.transpose(2, 3))
-
         scores = scores / (self.head_dim ** 0.5)
-
         attention = F.softmax(scores, dim=-1)
-
         context = torch.matmul(attention, values)
         context = context.transpose(1, 2)
-
         context = context.reshape(batch_size, seq_length, hidden_size)
         output = self.out(context)
-
         return output
 
-class KANFormer(torch.nn.Module):
-    def __init__(self, num_features, hidden_size, num_heads,
-                 n_blocks, ff_dims, max_seq_len, device, degree=3):
+class KANFormer(nn.Module):
+    def __init__(self, num_features, hidden_size, num_heads, n_blocks, ff_dims, max_seq_len, device, degree=3):
         super().__init__()
-
-        self.embedding = torch.nn.Linear(num_features, hidden_size)
+        self.embedding = nn.Linear(num_features, hidden_size)
         head_dim = hidden_size // num_heads
         rope = RotaryPositionalEmbedding(head_dim, max_seq_len)
         rotation_matrix = rope(max_seq_len).to(device)
-
-        self.blocks = torch.nn.ModuleList([
-            KANBlock(hidden_size, num_heads, rotation_matrix, degree)
-            for _ in range(n_blocks)
-        ])
-
-        self.ff = torch.nn.ModuleList()
-        
+        self.blocks = nn.ModuleList([KANBlock(hidden_size, num_heads, rotation_matrix, degree) for _ in range(n_blocks)])
+        self.ff = nn.ModuleList()
         in_size = max_seq_len * hidden_size
         for f in ff_dims:
             self.ff.append(ChebyshevKANLayer(in_size, f, degree))
@@ -116,29 +89,25 @@ class KANFormer(torch.nn.Module):
             x = block(x)
         x = x.flatten(start_dim=1)
         for f in self.ff:
-            x = f(x) 
+            x = f(x)
         return x
 
-
-class KANBlock(torch.nn.Module):
-    def __init__(self, hidden_size, num_heads, rotation_matrix, degree=3) -> None:
+class KANBlock(nn.Module):
+    def __init__(self, hidden_size, num_heads, rotation_matrix, degree=3):
         super().__init__()
-
         self.norm1 = RMSNorm(hidden_size)
-        self.attention = MultiheadKANAttention(hidden_size, num_heads,
-                                               rotation_matrix, degree)
+        self.attention = MultiheadKANAttention(hidden_size, num_heads, rotation_matrix, degree)
 
     def forward(self, x):
         x1 = self.attention(self.norm1(x))
         out = x + x1
         return out
 
-class RMSNorm(torch.nn.Module):
+class RMSNorm(nn.Module):
     def __init__(self, hidden_size: int, eps: float = 1e-6):
         super().__init__()
-
         self.eps = eps
-        self.weight = torch.nn.Parameter(torch.ones(hidden_size))
+        self.weight = nn.Parameter(torch.ones(hidden_size))
 
     def _norm(self, x):
         return x * torch.rsqrt(x.pow(2).mean(-1, keepdim=True) + self.eps)
@@ -147,12 +116,12 @@ class RMSNorm(torch.nn.Module):
         output = self._norm(x.float()).type_as(x)
         return output * self.weight
 
-class RotaryPositionalEmbedding(torch.nn.Module):
+class RotaryPositionalEmbedding(nn.Module):
     def __init__(self, dim, max_seq_len):
         super(RotaryPositionalEmbedding, self).__init__()
         self.dim = dim
         self.max_seq_len = max_seq_len
-        inv_freq = 1.0 / (1000 ** (torch.arange(0, dim, 2).float() / dim))
+        inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2).float() / dim))
         self.register_buffer('inv_freq', inv_freq)
         self.register_buffer('pos_enc', self._generate_positional_encoding(max_seq_len))
 
