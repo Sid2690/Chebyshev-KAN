@@ -13,14 +13,14 @@ class ChebyshevKANLayer(nn.Module):
         self.register_buffer("arange", torch.arange(0, degree + 1, 1))
 
     def chebyshev_polynomials(self, x):
-        T = [torch.ones_like(x), x]
+        T = [torch.ones_like(x),2*x]
         for n in range(2, self.degree + 1):
             T.append(2 * x * T[n - 1] - T[n - 2])
         return torch.stack(T, dim=-1)
 
     def forward(self, x):
         x = x.view(-1, self.inputdim)
-        x = 2 * (x - x.min(dim=1, keepdim=True)[0]) / (x.max(dim=1, keepdim=True)[0] - x.min(dim=1, keepdim=True)[0]) - 1
+        x = torch.tanh(x)
         T = self.chebyshev_polynomials(x)
         y = torch.einsum("bij,ioj->bo", T, self.cheby_coeffs)
         y = y.view(-1, self.outdim)
